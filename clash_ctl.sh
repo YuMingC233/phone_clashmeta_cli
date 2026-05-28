@@ -254,10 +254,15 @@ HELP
       else
         echo "    ├── 系统代理: 关"
       fi
-      # Google 联通
-      if ping -c 1 -W 2 www.google.com 1>/dev/null 2>&1; then
-        latency=$(ping -c 1 -W 2 www.google.com 2>/dev/null | grep -oP 'time=\K[0-9.]+' | head -1)
-        echo "    └── Google 连通性: ✓ (${latency}ms)"
+      # Google 联通 (通过代理测试)
+      result=$(curl -x "http://${PROXY_HOST}:${PROXY_PORT}" \
+        -s -o /dev/null -w '%{http_code} %{time_total}' \
+        --connect-timeout 3 --max-time 5 \
+        http://www.google.com 2>/dev/null)
+      http_code=$(echo "$result" | cut -d' ' -f1)
+      latency=$(echo "$result" | cut -d' ' -f2)
+      if [ "$http_code" = "200" ] || [ "$http_code" = "301" ] || [ "$http_code" = "302" ]; then
+        echo "    └── Google 连通性: ✓ (${latency}s)"
       else
         echo "    └── Google 连通性: ✗"
       fi
