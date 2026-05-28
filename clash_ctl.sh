@@ -99,9 +99,14 @@ status_json() {
   printf '  "hotspot": %s,\n' "$hs_val"
   printf '  "usb": %s,\n' "$usb_val"
   printf '  "clash": {\n'
-  printf '    "running": %s,\n' "$clash_running"
-  printf '    "mode": %s,\n' "$clash_mode"
-  printf '    "currentNode": %s\n' "$clash_node"
+  printf '    "running": %s' "$clash_running"
+  if $clash_running; then
+    printf ',\n    "mode": "%s",\n' "$clash_mode"
+    printf '    "currentNode": "%s"\n' "$clash_node"
+  else
+    printf ',\n    "mode": null,\n'
+    printf '    "currentNode": null\n'
+  fi
   printf '  },\n'
   printf '  "system": {\n'
   printf '    "proxy": %s,\n' "$proxy_val"
