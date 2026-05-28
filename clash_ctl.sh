@@ -1,7 +1,11 @@
 #!/bin/bash
-SECRET="7355608*"
-PROXY_HOST="172.19.0.1"
-PROXY_PORT="7698"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+if [ -f "$SCRIPT_DIR/.env" ]; then
+  source "$SCRIPT_DIR/.env"
+fi
+SECRET="${SECRET:-7355608*}"
+PROXY_HOST="${PROXY_HOST:-172.19.0.1}"
+PROXY_PORT="${PROXY_PORT:-7698}"
 
 # 等待 adb 设备就绪，最多等 10 秒
 ensure_device() {
@@ -19,6 +23,93 @@ ensure_device() {
 fwd_clash() {
   adb forward --remove tcp:9090 2>/dev/null
   adb forward tcp:9090 tcp:9090 1>/dev/null 2>&1
+}
+
+# 输出 JSON 格式的状态信息 (供 Web UI 调用)
+status_json() {
+  has_device=false
+  if ensure_device 2>/dev/null; then
+    has_device=true
+  fi
+
+  # 数据流量
+  md_val=false
+  if $has_device; then
+    md=$(adb shell settings get global mobile_data 2>/dev/null | tr -d '\r\n ')
+    [ "$md" = "1" ] && md_val=true
+  fi
+
+  # 热点
+  hs_val=false
+  if $has_device && adb shell dumpsys wifi 2>/dev/null | grep -q 'curState=StartedState'; then
+    hs_val=true
+  fi
+
+  # USB 网络共享
+  usb_val=false
+  if $has_device; then
+    usb_func=$(adb shell svc usb getFunctions 2>/dev/null | tail -1 | tr -d '\r\n ')
+    echo "$usb_func" | grep -q 'rndis' && usb_val=true
+  fi
+
+  # Clash 状态
+  clash_running=false
+  clash_mode="null"
+  clash_node="null"
+  if $has_device; then
+    fwd_clash 2>/dev/null
+    clash_resp=$(curl -s "http://127.0.0.1:9090/version" -H "Authorization: Bearer $SECRET" 2>/dev/null)
+    if echo "$clash_resp" | grep -q 'version'; then
+      clash_running=true
+      clash_mode=$(curl -s "http://127.0.0.1:9090/configs" -H "Authorization: Bearer $SECRET" 2>/dev/null | jq -r '.mode // "unknown"' 2>/dev/null)
+      clash_node=$(curl -s "http://127.0.0.1:9090/proxies/GLOBAL" -H "Authorization: Bearer $SECRET" 2>/dev/null | jq -r '.now // "unknown"' 2>/dev/null)
+    fi
+  fi
+
+  # 系统代理
+  proxy_val=false
+  if [ "$(gsettings get org.gnome.system.proxy mode 2>/dev/null)" = "'manual'" ]; then
+    proxy_val=true
+  fi
+
+  # Google 联通 (通过代理)
+  google_reachable=false
+  google_latency="null"
+  result=$(curl -x "http://${PROXY_HOST}:${PROXY_PORT}" \
+    -s -o /dev/null -w '%{http_code} %{time_total}' \
+    --connect-timeout 3 --max-time 5 \
+    http://www.google.com 2>/dev/null)
+  http_code=$(echo "$result" | cut -d' ' -f1)
+  latency=$(echo "$result" | cut -d' ' -f2)
+  if [ "$http_code" = "200" ] || [ "$http_code" = "301" ] || [ "$http_code" = "302" ]; then
+    google_reachable=true
+    google_latency=$latency
+  fi
+
+  # Root 权限
+  root_val=false
+  if $has_device && adb shell "su -c 'echo root'" 2>/dev/null | grep -q 'root'; then
+    root_val=true
+  fi
+
+  # 输出 JSON
+  printf '{\n'
+  printf '  "device": %s,\n' "$has_device"
+  printf '  "mobileData": %s,\n' "$md_val"
+  printf '  "hotspot": %s,\n' "$hs_val"
+  printf '  "usb": %s,\n' "$usb_val"
+  printf '  "clash": {\n'
+  printf '    "running": %s,\n' "$clash_running"
+  printf '    "mode": %s,\n' "$clash_mode"
+  printf '    "currentNode": %s\n' "$clash_node"
+  printf '  },\n'
+  printf '  "system": {\n'
+  printf '    "proxy": %s,\n' "$proxy_val"
+  printf '    "googleReachable": %s,\n' "$google_reachable"
+  printf '    "googleLatency": %s\n' "$google_latency"
+  printf '  },\n'
+  printf '  "root": %s\n' "$root_val"
+  printf '}\n'
 }
 
 # 执行单个命令
@@ -197,6 +288,10 @@ phone — Clash Meta 手机控制脚本
 HELP
       ;;
     status)
+      if [ "$2" = "--json" ]; then
+        status_json
+        return 0
+      fi
       echo "📱 手机状态"
 
       # ─ 数据流量
