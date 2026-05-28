@@ -48,8 +48,8 @@ status_json() {
   # USB 网络共享
   usb_val=false
   if $has_device; then
-    usb_func=$(adb shell svc usb getFunctions 2>/dev/null | tail -1 | tr -d '\r\n ')
-    echo "$usb_func" | grep -q 'rndis' && usb_val=true
+    usb_func=$(adb shell svc usb getFunctions 2>/dev/null | grep -Eo 'rndis|mtp' | head -1)
+    [ "$usb_func" = "rndis" ] && usb_val=true
   fi
 
   # Clash 状态
@@ -307,8 +307,8 @@ HELP
         fi
 
         # ─ USB 网络共享
-        usb_func=$(adb shell svc usb getFunctions 2>/dev/null | tail -1 | tr -d '\r\n ')
-        if echo "$usb_func" | grep -q 'rndis'; then
+        usb_func=$(adb shell svc usb getFunctions 2>/dev/null | grep -Eo 'rndis|mtp' | head -1)
+        if [ "$usb_func" = "rndis" ]; then
           echo "├── USB网络共享: 开"
         else
           echo "├── USB网络共享: 关"
