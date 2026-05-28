@@ -1,0 +1,16 @@
+[Unit]
+Description=Clash Meta Controller Web UI
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/node %h/Coding/OpenSource_Project/phone_clashmeta_cli/server/index.js
+WorkingDirectory=%h/Coding/OpenSource_Project/phone_clashmeta_cli/server
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=default.target
