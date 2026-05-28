@@ -212,7 +212,7 @@ HELP
         fi
 
         # ─ USB 网络共享
-        usb_func=$(adb shell svc usb getFunctions 2>/dev/null | tr -d '\r\n ')
+        usb_func=$(adb shell svc usb getFunctions 2>/dev/null | tail -1 | tr -d '\r\n ')
         if echo "$usb_func" | grep -q 'rndis'; then
           echo "├── USB网络共享: 开"
         else
