@@ -20,15 +20,26 @@ function boolTag(v: boolean | undefined) {
 
 function InfoPanel({ status }: Props) {
   if (!status) {
-    return <Card title="状态"><p>无法获取状态，请检查设备连接。</p></Card>;
+    return (
+      <div style={{ padding: '12px 16px' }}>
+        <Card title="状态"><p>无法获取状态，请检查设备连接。</p></Card>
+      </div>
+    );
   }
 
   const { clash, system } = status;
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 12,
+      padding: '12px 16px',
+      overflowY: 'auto',
+      height: '100%',
+    }}>
       {/* 手机状态 */}
-      <Card title="手机状态" size="small">
+      <Card title="手机状态" size="default" styles={{ body: { padding: '12px 16px' } }}>
         <Descriptions column={1} size="small" colon={false}>
           <Descriptions.Item label={<><MobileOutlined /> 数据流量</>}>
             {boolTag(status.mobileData)}
@@ -46,7 +57,7 @@ function InfoPanel({ status }: Props) {
       </Card>
 
       {/* Clash 状态 */}
-      <Card title="Clash" size="small">
+      <Card title="Clash" size="default" styles={{ body: { padding: '12px 16px' } }}>
         <Descriptions column={1} size="small" colon={false}>
           <Descriptions.Item label="运行状态">
             {clash.running ? (
@@ -65,7 +76,7 @@ function InfoPanel({ status }: Props) {
       </Card>
 
       {/* 本机系统 */}
-      <Card title="本机系统" size="small">
+      <Card title="本机系统" size="default" styles={{ body: { padding: '12px 16px' } }}>
         <Descriptions column={1} size="small" colon={false}>
           <Descriptions.Item label="系统代理">
             {boolTag(system.proxy)}
