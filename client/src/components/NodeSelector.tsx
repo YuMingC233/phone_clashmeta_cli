@@ -5,14 +5,14 @@ interface Props {
   nodes: string[];
   currentNode: string | null;
   disabled: boolean;
-  onAction: (fn: () => Promise<unknown>) => void;
+  onAction: (actionName: string, fn: () => Promise<unknown>) => void;
 }
 
 function NodeSelector({ nodes, currentNode, disabled, onAction }: Props) {
   return (
     <Select
       showSearch
-      size="small"
+      size="middle"
       style={{ width: '100%' }}
       placeholder="选择节点"
       value={currentNode ?? undefined}
@@ -21,7 +21,7 @@ function NodeSelector({ nodes, currentNode, disabled, onAction }: Props) {
       filterOption={(input, option) =>
         (option?.label as string)?.toLowerCase().includes(input.toLowerCase())
       }
-      onChange={(name) => onAction(() => switchNode(name))}
+      onChange={(name) => onAction('切换节点', () => switchNode(name))}
     />
   );
 }

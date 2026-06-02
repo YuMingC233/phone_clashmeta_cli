@@ -115,7 +115,7 @@ app.put('/api/mode', async (req, res) => {
 });
 
 // ─── Phone settings ────────────────────────────────────────
-app.post('/api/mobile-data', async (_req, res) => {
+app.post('/api/mobile-data/on', async (_req, res) => {
   try {
     await runScript(['mbdopen']);
     res.json({ success: true });
@@ -124,9 +124,27 @@ app.post('/api/mobile-data', async (_req, res) => {
   }
 });
 
-app.post('/api/hotspot', async (_req, res) => {
+app.post('/api/mobile-data/off', async (_req, res) => {
+  try {
+    await runScript(['mbdoff']);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/hotspot/open', async (_req, res) => {
   try {
     await runScript(['hspopen'], { timeout: 15000 });
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/hotspot/close', async (_req, res) => {
+  try {
+    await runScript(['hspclose'], { timeout: 15000 });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });

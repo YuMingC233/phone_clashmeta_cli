@@ -22,8 +22,10 @@ export const getRoot    = ()                  => request<RootCheck>('/root-check
 export const getNodes   = ()                  => request<NodesData>('/nodes');
 export const clashOn    = ()                  => post('/clash/on');
 export const clashOff   = ()                  => post('/clash/off');
-export const mobileData = ()                  => post('/mobile-data');
-export const hotspot    = ()                  => post('/hotspot');
+export const mobileDataOn  = ()                  => post('/mobile-data/on');
+export const mobileDataOff = ()                  => post('/mobile-data/off');
+export const hotspotOpen  = ()                  => post('/hotspot/open');
+export const hotspotClose = ()                  => post('/hotspot/close');
 export const usbOn      = ()                  => post('/usb/on');
 export const usbOff     = ()                  => post('/usb/off');
 export const mute       = ()                  => post('/mute');
