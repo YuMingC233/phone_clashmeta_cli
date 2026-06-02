@@ -4,7 +4,7 @@ if [ -f "$SCRIPT_DIR/.env" ]; then
   source "$SCRIPT_DIR/.env"
 fi
 SECRET="${SECRET:-7355608*}"
-PROXY_HOST="${PROXY_HOST:-172.19.0.1}"
+PROXY_HOST="${PROXY_HOST:-127.0.0.1}"
 PROXY_PORT="${PROXY_PORT:-7698}"
 
 # 等待 adb 设备就绪，最多等 10 秒
@@ -23,6 +23,12 @@ ensure_device() {
 fwd_clash() {
   adb forward --remove tcp:9090 2>/dev/null
   adb forward tcp:9090 tcp:9090 1>/dev/null 2>&1
+}
+
+# 清理并重建代理端口转发
+fwd_proxy() {
+  adb forward --remove tcp:7698 2>/dev/null
+  adb forward tcp:7698 tcp:7698 1>/dev/null 2>&1
 }
 
 # 输出 JSON 格式的状态信息 (供 Web UI 调用)
@@ -75,7 +81,7 @@ status_json() {
   # Google 联通 (通过代理)
   google_reachable=false
   google_latency="null"
-  result=$(curl -x "http://${PROXY_HOST}:${PROXY_PORT}" \
+  result=$(curl -x "http://127.0.0.1:${PROXY_PORT}" \
     -s -o /dev/null -w '%{http_code} %{time_total}' \
     --connect-timeout 3 --max-time 5 \
     http://www.google.com 2>/dev/null)
@@ -220,6 +226,7 @@ run_action() {
 
     # ─── 本机系统代理 ───
     gsyson)
+      fwd_proxy
       gsettings set org.gnome.system.proxy mode 'manual' 2>/dev/null
       gsettings set org.gnome.system.proxy.http host "$PROXY_HOST" 2>/dev/null
       gsettings set org.gnome.system.proxy.http port "$PROXY_PORT" 2>/dev/null
@@ -231,7 +238,7 @@ run_action() {
       ;;
     gsysoff)
       gsettings set org.gnome.system.proxy mode 'none' 2>/dev/null
-      unsetproxy
+      unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY all_proxy ALL_PROXY 2>/dev/null
       echo "本机代理已关闭"
       ;;
 
@@ -239,11 +246,13 @@ run_action() {
     booton)
       run_action mbdopen
       run_action usbon
+      fwd_proxy
       run_action clashon
       run_action gsyson
       run_action mute
       ;;
     tempon)
+      fwd_proxy
       run_action clashon
       run_action gsyson
       ;;
@@ -355,7 +364,7 @@ HELP
         echo "    ├── 系统代理: 关"
       fi
       # Google 联通 (通过代理测试)
-      result=$(curl -x "http://${PROXY_HOST}:${PROXY_PORT}" \
+      result=$(curl -x "http://127.0.0.1:${PROXY_PORT}" \
         -s -o /dev/null -w '%{http_code} %{time_total}' \
         --connect-timeout 3 --max-time 5 \
         http://www.google.com 2>/dev/null)
