@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Layout, Spin, message } from 'antd';
 import { getStatus, getNodes, getRoot } from './api';
 import type { FullStatus } from './types';
@@ -7,6 +7,8 @@ import ControlPanel from './components/ControlPanel';
 
 const { Header, Content } = Layout;
 
+const POLL_INTERVAL_MS = 8000;
+
 function App() {
   const [status, setStatus] = useState<FullStatus | null>(null);
   const [nodes, setNodes] = useState<string[]>([]);
@@ -14,6 +16,7 @@ function App() {
   const [root, setRoot] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingAction, setLoadingAction] = useState<string | null>(null);
+  const pollingRef = useRef(false);
 
   const refresh = useCallback(async () => {
     try {
@@ -28,26 +31,66 @@ function App() {
     setLoading(false);
   }, []);
 
+  // Retry-with-backoff for actions that restart Clash (mode switch, clash on/off)
+  const refreshWithRetry = useCallback(async (maxRetries = 8, baseDelayMs = 800) => {
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        const [s, n, r] = await Promise.all([getStatus(), getNodes(), getRoot()]);
+        setStatus(s);
+        setNodes(n.all || []);
+        setCurrentNode(n.now || null);
+        setRoot(r.root);
+        // If Clash is confirmed running with a valid mode, we're done
+        if (s.clash?.running && s.clash?.mode !== null) {
+          return;
+        }
+      } catch {
+        // retry on failure
+      }
+      if (i < maxRetries - 1) {
+        await new Promise(r => setTimeout(r, baseDelayMs * Math.pow(1.5, i)));
+      }
+    }
+  }, []);
+
+  // Initial load
   useEffect(() => {
     refresh();
+  }, [refresh]);
+
+  // Periodic polling to keep UI in sync with device state
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!pollingRef.current) {
+        refresh();
+      }
+    }, POLL_INTERVAL_MS);
+    return () => clearInterval(id);
   }, [refresh]);
 
   const action = useCallback(
     async (actionName: string, fn: () => Promise<unknown>) => {
       setLoadingAction(actionName);
+      pollingRef.current = true;
       try {
         await fn();
         message.success(`${actionName} 成功`);
-        await refresh();
+        // For actions that restart Clash, retry until the API is back
+        if (actionName === '切换代理模式' || actionName === '开启Clash' || actionName === '关闭Clash') {
+          await refreshWithRetry();
+        } else {
+          await refresh();
+        }
       } catch (err) {
         message.error(
           `操作失败: ${err instanceof Error ? err.message : "未知错误"}`,
         );
       } finally {
         setLoadingAction(null);
+        pollingRef.current = false;
       }
     },
-    [refresh],
+    [refresh, refreshWithRetry],
   );
 
   return (

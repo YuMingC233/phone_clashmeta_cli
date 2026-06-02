@@ -177,8 +177,19 @@ run_action() {
       adb shell am start -a com.github.metacubex.clash.meta.action.STOP_CLASH 1>/dev/null 2>&1
       sleep 2
       adb shell am start -a com.github.metacubex.clash.meta.action.START_CLASH 1>/dev/null 2>&1
-      sleep 3
-      echo "代理模式已切换为: $mode (已重启 Clash)"
+      echo "代理模式已切换为: $mode (已重启 Clash，正在验证...)"
+      # Wait for Clash API to be ready and verify the mode actually changed
+      fwd_clash 2>/dev/null
+      for i in $(seq 1 12); do
+        sleep 1
+        verify=$(curl -s "http://127.0.0.1:9090/configs" -H "Authorization: Bearer $SECRET" 2>/dev/null | jq -r '.mode // empty')
+        if [ "$verify" = "$mode" ]; then
+          echo "已确认代理模式: $mode"
+          return 0
+        fi
+      done
+      echo "警告: 代理模式切换后验证超时，请手动确认" >&2
+      return 1
       ;;
 
     # ─── 手机设置 ───
