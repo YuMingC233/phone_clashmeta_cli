@@ -192,6 +192,16 @@ run_action() {
       adb shell settings put global mobile_data 1
       echo "流量已打开"
       ;;
+    mbdoff)
+      ensure_device || return 1
+      val=$(adb shell settings get global mobile_data 2>/dev/null | tr -d '\r\n ')
+      if [ "$val" = "0" ]; then
+        echo "流量已关闭"
+        return 1
+      fi
+      adb shell settings put global mobile_data 0
+      echo "流量已关闭"
+      ;;
     hspopen)
       ensure_device || return 1
       if adb shell dumpsys wifi 2>/dev/null | grep -q 'curState=StartedState'; then
@@ -205,8 +215,17 @@ run_action() {
       fi
       # Escape for su -c double-quoted context: backslash, double-quote, backtick, $
       esc_ssid=$(echo "$ssid" | sed 's/\\/\\\\/g; s/"/\\"/g; s/`/\\`/g; s/\$/\\$/g')
-      adb shell "su -c \"cmd wifi start-softap \\\"${esc_ssid}\\\" open\""
-      echo "热点已打开: $ssid"
+      adb shell "su -c \"cmd wifi start-softap \\\"${esc_ssid}\\\" wpa2 jjc1234321\""
+      echo "热点已打开 (WPA2): $ssid"
+      ;;
+    hspclose)
+      ensure_device || return 1
+      if ! adb shell dumpsys wifi 2>/dev/null | grep -q 'curState=StartedState'; then
+        echo "热点未开启"
+        return 1
+      fi
+      adb shell "su -c 'cmd wifi stop-softap'"
+      echo "热点已关闭"
       ;;
     usbon)
       ensure_device || return 1
@@ -278,7 +297,9 @@ phone — Clash Meta 手机控制脚本
 
 ┌─ 手机设置 ──────────────────────────────────────┐
 │ mbdopen           打开手机数据流量               │
+│ mbdoff            关闭手机数据流量               │
 │ hspopen           打开手机 WiFi 热点             │
+│ hspclose          关闭手机 WiFi 热点             │
 │ usbon             开启 USB 网络共享              │
 │ usboff            关闭 USB 网络共享              │
 │ mute              手机静音                       │
