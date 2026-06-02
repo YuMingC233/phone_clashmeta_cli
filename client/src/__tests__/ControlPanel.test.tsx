@@ -28,21 +28,6 @@ vi.mock('../components/NodeSelector', () => ({
   default: () => <div data-testid="node-selector">NodeSelector</div>,
 }));
 
-// Match the antd theme for Radio.Button rendering
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation((query: string) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-});
-
 function makeStatus(overrides: Partial<FullStatus> = {}): FullStatus {
   return {
     device: true,

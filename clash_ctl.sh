@@ -178,17 +178,30 @@ run_action() {
       sleep 2
       adb shell am start -a com.github.metacubex.clash.meta.action.START_CLASH 1>/dev/null 2>&1
       echo "代理模式已切换为: $mode (已重启 Clash，正在验证...)"
-      # Wait for Clash API to be ready and verify the mode actually changed
       fwd_clash 2>/dev/null
-      for i in $(seq 1 12); do
+      # Phase 1: wait for Clash HTTP API to come alive (check /version)
+      api_alive=false
+      for i in $(seq 1 15); do
         sleep 1
-        verify=$(curl -s "http://127.0.0.1:9090/configs" -H "Authorization: Bearer $SECRET" 2>/dev/null | jq -r '.mode // empty')
+        if curl -s "http://127.0.0.1:9090/version" -H "Authorization: Bearer $SECRET" 2>/dev/null | grep -q 'version'; then
+          api_alive=true
+          break
+        fi
+      done
+      if ! $api_alive; then
+        echo "警告: Clash API 未在 15 秒内启动，请手动确认" >&2
+        return 1
+      fi
+      # Phase 2: verify mode via /configs (same jq pattern as pre-switch check)
+      for i in $(seq 1 8); do
+        sleep 1
+        verify=$(curl -s "http://127.0.0.1:9090/configs" -H "Authorization: Bearer $SECRET" 2>/dev/null | jq -r '.mode')
         if [ "$verify" = "$mode" ]; then
           echo "已确认代理模式: $mode"
           return 0
         fi
       done
-      echo "警告: 代理模式切换后验证超时，请手动确认" >&2
+      echo "警告: 代理模式验证超时 (当前: ${verify:-无响应})，请手动确认" >&2
       return 1
       ;;
 

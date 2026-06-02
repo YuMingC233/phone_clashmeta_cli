@@ -386,14 +386,17 @@ test_status_json_clash_not_ready_scenario() {
 
 test_post_restart_verification() {
   echo ""
-  echo "=== Test: Post-restart verification loop (added in fix) ==="
+  echo "=== Test: Post-restart verification (two-phase: /version then /configs) ==="
   local script_content
   script_content=$(cat "$SCRIPT")
 
-  assert_contains "verify mode after restart via /configs" "$script_content" "verify"
-  assert_contains "retry loop for post-restart check" "$script_content" "seq 1"
-  assert_contains "warns on verification timeout" "$script_content" "验证超时"
+  assert_contains "phase 1: wait for /version" "$script_content" "/version"
+  assert_contains "phase 1: api_alive flag" "$script_content" "api_alive"
+  assert_contains "phase 2: verify mode via /configs" "$script_content" "/configs"
+  assert_contains "verification timeout message" "$script_content" "验证超时"
   assert_contains "returns 1 on verification failure" "$script_content" "return 1"
+  assert_contains "reports current mode on timeout" "$script_content" "当前:"
+  assert_contains "warns if API never comes alive" "$script_content" "Clash API 未在"
 }
 
 test_frontend_polling_and_retry() {
