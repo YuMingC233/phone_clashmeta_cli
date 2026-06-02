@@ -38,9 +38,9 @@ cd ../client && pnpm install && pnpm run build
 
 # 4. 注册系统服务 (可选，开机自启)
 mkdir -p ~/.config/systemd/user/
-cp systemd/clash-ctl-server.service ~/.config/systemd/user/
-systemctl --user daemon-reload
-systemctl --user enable --now clash-ctl-server.service
+cp systemd/clash-ctl-server.service ~/.config/systemd/user/ &&
+systemctl --user daemon-reload &&
+systemctl --user enable --now clash-ctl-server.service 
 
 # 5. 注册 CLI 命令 (可选)
 sudo ln -sf "$(pwd)/clash_ctl.sh" /usr/local/bin/phone
@@ -93,4 +93,17 @@ cd server && pnpm run dev
 
 # 启动前端开发服务器 (端口 5173，自动代理 API 到后端)
 cd client && pnpm run dev
+```
+
+
+## 快速更新
+可直接复制粘贴
+
+```shell
+# phase 1 build and packgage web ui
+cd ./client && pnpm run build && cd .. && 
+# phase 2 update systemd 
+cp systemd/clash-ctl-server.service ~/.config/systemd/user/ &&
+systemctl --user daemon-reload &&
+systemctl --user enable --now clash-ctl-server.service 
 ```
